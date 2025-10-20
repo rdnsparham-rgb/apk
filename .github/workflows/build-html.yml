@@ -1,36 +1,39 @@
-name: Build Android APK with TextView
+name: Build Android APK from config.json
 
 on:
   workflow_dispatch:
-    inputs:
-      text_view:
-        description: 'متن TextView'
-        default: 'سلام'
-      app_name:
-        description: 'اسم برنامه'
-        default: 'app'
-      apk_name:
-        description: 'اسم فایل APK'
-        default: 'apk.app'
-      package_name:
-        description: 'Package Name'
-        default: 'app'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Read config.json
+        id: config
+        run: |
+          CONFIG_FILE=config.json
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "config.json موجود نیست!"
+            exit 1
+          fi
+          TEXT_VIEW=$(jq -r '.text_view' $CONFIG_FILE)
+          APP_NAME=$(jq -r '.app_name' $CONFIG_FILE)
+          APK_NAME=$(jq -r '.apk_name' $CONFIG_FILE)
+          PACKAGE_NAME=$(jq -r '.package_name' $CONFIG_FILE)
+          echo "TEXT_VIEW=$TEXT_VIEW" >> $GITHUB_ENV
+          echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
+          echo "APK_NAME=$APK_NAME" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
 
       - name: Create minimal Android project
         run: |
           mkdir -p MyApp/app/src/main/java/com/example/
           mkdir -p MyApp/app/src/main/res/layout
-          mkdir -p MyApp/app/src/main/AndroidManifest.xml
           
-          # فایل MainActivity.java با TextView
+          # MainActivity.java با TextView
           echo "package com.example;
           import android.os.Bundle;
           import android.widget.TextView;
@@ -40,15 +43,15 @@ jobs:
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   TextView tv = new TextView(this);
-                  tv.setText(\"${{ github.event.inputs.text_view }}\");
+                  tv.setText(\"$TEXT_VIEW\");
                   tv.setTextSize(24);
                   setContentView(tv);
               }
           }" > MyApp/app/src/main/java/com/example/MainActivity.java
 
-          # فایل AndroidManifest.xml
-          echo "<manifest package=\"${{ github.event.inputs.package_name }}\" xmlns:android=\"http://schemas.android.com/apk/res/android\">
-            <application android:label=\"${{ github.event.inputs.app_name }}\">
+          # AndroidManifest.xml
+          echo "<manifest package=\"$PACKAGE_NAME\" xmlns:android=\"http://schemas.android.com/apk/res/android\">
+            <application android:label=\"$APP_NAME\">
               <activity android:name=\".MainActivity\">
                 <intent-filter>
                   <action android:name=\"android.intent.action.MAIN\" />
@@ -58,4 +61,26 @@ jobs:
             </application>
           </manifest>" > MyApp/app/src/main/AndroidManifest.xml
 
-          # ساخت Gradle wrapper و build.gradle ساده
+          # build.gradle ساده
+          echo "plugins { id 'com.android.application' }
+          android {
+              compileSdk 33
+              defaultConfig {
+                  applicationId \"$PACKAGE_NAME\"
+                  minSdk 21
+                  targetSdk 33
+                  versionCode 1
+                  versionName \"1.0\"
+              }
+          }" > MyApp/app/build.gradle
+
+      - name: Build APK (Simulation)
+        run: |
+          mkdir -p output
+          touch output/$APK_NAME   # شبیه‌سازی خروجی APK
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: output/$APK_NAME
