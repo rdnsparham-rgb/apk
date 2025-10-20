@@ -1,4 +1,4 @@
-name: Build Android APK from config.json
+name: Build Android APK
 
 on:
   workflow_dispatch:
@@ -11,29 +11,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Read config.json
         id: config
         run: |
-          CONFIG_FILE=config.json
-          if [ ! -f "$CONFIG_FILE" ]; then
+          if [ ! -f "config.json" ]; then
             echo "config.json موجود نیست!"
             exit 1
           fi
-          TEXT_VIEW=$(jq -r '.text_view' $CONFIG_FILE)
-          APP_NAME=$(jq -r '.app_name' $CONFIG_FILE)
-          APK_NAME=$(jq -r '.apk_name' $CONFIG_FILE)
-          PACKAGE_NAME=$(jq -r '.package_name' $CONFIG_FILE)
+          TEXT_VIEW=$(jq -r '.text_view' config.json)
+          APP_NAME=$(jq -r '.app_name' config.json)
+          APK_NAME=$(jq -r '.apk_name' config.json)
+          PACKAGE_NAME=$(jq -r '.package_name' config.json)
           echo "TEXT_VIEW=$TEXT_VIEW" >> $GITHUB_ENV
           echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
           echo "APK_NAME=$APK_NAME" >> $GITHUB_ENV
           echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
 
-      - name: Create minimal Android project
+      - name: Update MainActivity with TextView
         run: |
-          mkdir -p MyApp/app/src/main/java/com/example/
-          mkdir -p MyApp/app/src/main/res/layout
-          
-          # MainActivity.java با TextView
           echo "package com.example;
           import android.os.Bundle;
           import android.widget.TextView;
@@ -47,9 +48,10 @@ jobs:
                   tv.setTextSize(24);
                   setContentView(tv);
               }
-          }" > MyApp/app/src/main/java/com/example/MainActivity.java
+          }" > app/src/main/java/com/example/MainActivity.java
 
-          # AndroidManifest.xml
+      - name: Update AndroidManifest.xml
+        run: |
           echo "<manifest package=\"$PACKAGE_NAME\" xmlns:android=\"http://schemas.android.com/apk/res/android\">
             <application android:label=\"$APP_NAME\">
               <activity android:name=\".MainActivity\">
@@ -59,28 +61,15 @@ jobs:
                 </intent-filter>
               </activity>
             </application>
-          </manifest>" > MyApp/app/src/main/AndroidManifest.xml
+          </manifest>" > app/src/main/AndroidManifest.xml
 
-          # build.gradle ساده
-          echo "plugins { id 'com.android.application' }
-          android {
-              compileSdk 33
-              defaultConfig {
-                  applicationId \"$PACKAGE_NAME\"
-                  minSdk 21
-                  targetSdk 33
-                  versionCode 1
-                  versionName \"1.0\"
-              }
-          }" > MyApp/app/build.gradle
-
-      - name: Build APK (Simulation)
+      - name: Build APK
         run: |
-          mkdir -p output
-          touch output/$APK_NAME   # شبیه‌سازی خروجی APK
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: apk
-          path: output/$APK_NAME
+          path: app/build/outputs/apk/debug/app-debug.apk
