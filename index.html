@@ -2,27 +2,49 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>APK Builder Input</title>
+  <title>APK Builder</title>
   <style>
     body { font-family: Arial; text-align: center; padding-top: 50px; }
-    input, button { font-size: 18px; padding: 10px; margin: 5px; }
+    input, button { font-size: 18px; padding: 10px; margin: 5px; width: 250px; }
+    label { font-weight: bold; }
   </style>
 </head>
 <body>
   <h1>تنظیمات APK</h1>
 
   <label>متن TextView:</label><br>
-  <input type="text" id="textViewInput" placeholder="سلام" value="سلام"><br>
+  <input type="text" id="textViewInput" value="سلام"><br>
 
   <label>نام برنامه:</label><br>
-  <input type="text" id="appNameInput" placeholder="app" value="app"><br>
+  <input type="text" id="appNameInput" value="app"><br>
 
   <label>نام فایل APK:</label><br>
-  <input type="text" id="apkNameInput" placeholder="apk.app" value="apk.app"><br>
+  <input type="text" id="apkNameInput" value="apk.app"><br>
 
   <label>Package Name:</label><br>
-  <input type="text" id="packageNameInput" placeholder="app" value="app"><br>
+  <input type="text" id="packageNameInput" value="app"><br>
 
-  <p>بعد از تغییر مقادیر، workflow GitHub این ورودی‌ها را می‌خواند و APK را می‌سازد.</p>
+  <br>
+  <button onclick="downloadConfig()">ساخت فایل config.json</button>
+
+  <script>
+    function downloadConfig() {
+      const config = {
+        text_view: document.getElementById('textViewInput').value,
+        app_name: document.getElementById('appNameInput').value,
+        apk_name: document.getElementById('apkNameInput').value,
+        package_name: document.getElementById('packageNameInput').value
+      };
+
+      const blob = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'config.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      alert('فایل config.json آماده شد. این فایل را داخل ریپو قرار بده تا workflow APK بسازد.');
+    }
+  </script>
 </body>
 </html>
