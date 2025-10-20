@@ -1,0 +1,61 @@
+name: Build Android APK with TextView
+
+on:
+  workflow_dispatch:
+    inputs:
+      text_view:
+        description: 'متن TextView'
+        default: 'سلام'
+      app_name:
+        description: 'اسم برنامه'
+        default: 'app'
+      apk_name:
+        description: 'اسم فایل APK'
+        default: 'apk.app'
+      package_name:
+        description: 'Package Name'
+        default: 'app'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Create minimal Android project
+        run: |
+          mkdir -p MyApp/app/src/main/java/com/example/
+          mkdir -p MyApp/app/src/main/res/layout
+          mkdir -p MyApp/app/src/main/AndroidManifest.xml
+          
+          # فایل MainActivity.java با TextView
+          echo "package com.example;
+          import android.os.Bundle;
+          import android.widget.TextView;
+          import androidx.appcompat.app.AppCompatActivity;
+          public class MainActivity extends AppCompatActivity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  TextView tv = new TextView(this);
+                  tv.setText(\"${{ github.event.inputs.text_view }}\");
+                  tv.setTextSize(24);
+                  setContentView(tv);
+              }
+          }" > MyApp/app/src/main/java/com/example/MainActivity.java
+
+          # فایل AndroidManifest.xml
+          echo "<manifest package=\"${{ github.event.inputs.package_name }}\" xmlns:android=\"http://schemas.android.com/apk/res/android\">
+            <application android:label=\"${{ github.event.inputs.app_name }}\">
+              <activity android:name=\".MainActivity\">
+                <intent-filter>
+                  <action android:name=\"android.intent.action.MAIN\" />
+                  <category android:name=\"android.intent.category.LAUNCHER\" />
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>" > MyApp/app/src/main/AndroidManifest.xml
+
+          # ساخت Gradle wrapper و build.gradle ساده
